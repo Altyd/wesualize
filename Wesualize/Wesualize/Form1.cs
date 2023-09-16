@@ -60,7 +60,15 @@ namespace Wesualize
         {
             Environment.Exit(0);
         }
+        private float LimitChange(float originalValue, float newValue)
+        {
+            float maxAllowedValue = originalValue * 1.20f; // 20% increase
+            float minAllowedValue = originalValue * 0.80f; // 20% decrease
 
+            return Math.Max(minAllowedValue, Math.Min(maxAllowedValue, newValue));
+        }
+        private const float MAX_PERCENTAGE_CHANGE = 0.18f; // 20%
+        private const float MIN_PERCENTAGE_CHANGE = -0.18f; // -20%
         private void siticoneButton1_Click(object sender, EventArgs e)
         {
             openFileDialog1.Filter = "CSV Files (*.csv)|*.csv|All Files (*.*)|*.*";
@@ -139,36 +147,35 @@ namespace Wesualize
                     float xx = float.Parse(before);
                     y = xx / 10;
                     float amount = y / 10;
+                    float rawPrediction = salesPrediction.Score;
                     switch (bias)
                     {
-
                         case Bias.Positive:
                             float amount3 = 1 + amount;
-                            Console.WriteLine(amount3);
                             if (siticoneSlider1.Value == 0)
                             {
                                 salesPrediction.Score = (float)(salesPrediction.Score * 1.05);  // Increase by 5%
                             }
                             else
                             {
-                                salesPrediction.Score = (float)(salesPrediction.Score * amount3);  // Incrase by 5%
+                                salesPrediction.Score = (float)(salesPrediction.Score * amount3);  // Increase by bias percentage
                             }
                             break;
+
                         case Bias.Negative:
                             float amount2 = 1 - amount;
-                            Console.WriteLine(amount2);
                             if (siticoneSlider1.Value == 0)
                             {
                                 salesPrediction.Score = (float)(salesPrediction.Score * 0.95);  // Decrease by 5%
                             }
                             else
                             {
-                                salesPrediction.Score = (float)(salesPrediction.Score * amount2);  // Decrease by 5%
+                                salesPrediction.Score = (float)(salesPrediction.Score * amount2);  // Decrease by bias percentage
                             }
                             break;
                             // Neutral does nothing
                     }
-
+                    salesPrediction.Score = LimitChange(rawPrediction, salesPrediction.Score);
                     series.Points.AddXY($"Month {companyData.Count + i}", salesPrediction.Score);
                 }
 
