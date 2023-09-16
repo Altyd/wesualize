@@ -57,3 +57,4 @@ D:\github\wesualize\Wesualize\Wesualize\obj\x64\Debug\Wesualize.csproj.CoreCompi
 D:\github\wesualize\Wesualize\Wesualize\obj\x64\Debug\Wesualize.csproj.CopyComplete
 D:\github\wesualize\Wesualize\Wesualize\obj\x64\Debug\Wesualize.exe
 D:\github\wesualize\Wesualize\Wesualize\obj\x64\Debug\Wesualize.pdb
+D:\github\wesualize\Wesualize\Wesualize\bin\x64\Debug\Siticone.UI.dll
