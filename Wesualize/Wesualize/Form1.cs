@@ -19,6 +19,7 @@ namespace Wesualize
 
         private void Form1_Load(object sender, EventArgs e)
         {
+            panel2.Hide();
         }
         private void btnOpenFile_Click(object sender, EventArgs e)
         {
@@ -60,15 +61,45 @@ namespace Wesualize
         {
             Environment.Exit(0);
         }
-        private float LimitChange(float originalValue, float newValue)
-        {
-            float maxAllowedValue = originalValue * 1.20f; // 20% increase
-            float minAllowedValue = originalValue * 0.80f; // 20% decrease
 
-            return Math.Max(minAllowedValue, Math.Min(maxAllowedValue, newValue));
+        //
+        private const float MAX_PERCENTAGE_CHANGE = 0.40f; // 20%
+        private const float MIN_PERCENTAGE_CHANGE = -0.40f; // -20%
+
+        private float EnsureRealisticPrediction(float predictedValue, List<DataEntry> historicalData)
+        {
+            float lastHistoricalValue = historicalData.Last().Sales;
+            float percentageChange = (predictedValue - lastHistoricalValue) / lastHistoricalValue;
+
+            // If the change is within limits, directly return the predicted value
+            if (percentageChange >= MIN_PERCENTAGE_CHANGE && percentageChange <= MAX_PERCENTAGE_CHANGE)
+                return predictedValue;
+
+            // Adjust based on the recent trend
+            float trend = ComputeRecentTrend(historicalData);
+            predictedValue += trend;
+
+            // Re-compute the percentage change after applying the trend adjustment
+            percentageChange = (predictedValue - lastHistoricalValue) / lastHistoricalValue;
+
+            // Calculate a factor that's a smooth gradient between 1 to 1.2 (or 0.8 for decreases)
+            float adjustmentFactor = 1 + (MAX_PERCENTAGE_CHANGE * (percentageChange / Math.Abs(percentageChange)));
+
+            // Adjust the prediction with the factor, making it feel more "natural"
+            float adjustedPrediction = lastHistoricalValue * adjustmentFactor;
+
+            return adjustedPrediction;
         }
-        private const float MAX_PERCENTAGE_CHANGE = 0.18f; // 20%
-        private const float MIN_PERCENTAGE_CHANGE = -0.18f; // -20%
+
+        private float ComputeRecentTrend(List<DataEntry> historicalData, int months = 3)
+        {
+            if (historicalData.Count < months)
+                return 0; // No sufficient data to determine a trend
+
+            float difference = historicalData.Last().Sales - historicalData[historicalData.Count - months].Sales;
+            return difference / months;
+        }
+        //
         private void siticoneButton1_Click(object sender, EventArgs e)
         {
             openFileDialog1.Filter = "CSV Files (*.csv)|*.csv|All Files (*.*)|*.*";
@@ -107,8 +138,9 @@ namespace Wesualize
         private void siticoneButton2_Click(object sender, EventArgs e)
         {
             // Call the overloaded method with default Bias.Neutral
-            siticoneButton2_Click(sender, e, Bias.Negative);
+            siticoneButton2_Click(sender, e, Bias.Neutral);
         }
+
         private void siticoneButton2_Click(object sender, EventArgs e, Bias bias)
         {
             chart1.Series.Clear();
@@ -137,8 +169,18 @@ namespace Wesualize
 
                 var model = pipeline.Fit(trainData);
                 float y;
+                try
+                {
+                  int num1 = int.Parse(siticoneTextBox1.Text);
+                }
+                catch
+                {
+                    MessageBox.Show("Please select a time span");
+                    Environment.Exit(1);
+
+                }
                 int num = int.Parse(siticoneTextBox1.Text);
-                // Predict next 2 months
+                // Predict next num of months
                 for (int i = 1; i <= (num); i++)
                 {
                     var prediction = model.Transform(context.Data.LoadFromEnumerable(new List<SalesData> { new SalesData { MonthNumber = companyData.Count + i } }));
@@ -175,7 +217,7 @@ namespace Wesualize
                             break;
                             // Neutral does nothing
                     }
-                    salesPrediction.Score = LimitChange(rawPrediction, salesPrediction.Score);
+                    //salesPrediction.Score = EnsureRealisticPrediction(salesPrediction.Score, companyData);
                     series.Points.AddXY($"Month {companyData.Count + i}", salesPrediction.Score);
                 }
 
@@ -234,6 +276,51 @@ namespace Wesualize
                 File.WriteAllLines(saveFileDialog.FileName, csvData);
                 MessageBox.Show("Predictions exported successfully.");
             }
+        }
+
+        private void siticoneButton4_Click(object sender, EventArgs e)
+        {
+            if (panel2.Visible == false)
+            {
+                chart1.Visible = false;
+                showcsv();
+                panel2.Show();
+            }
+            else
+            {
+                panel2.Hide();
+                chart1.Visible = true;
+            }
+        }
+        private async void showcsv()
+        {
+            if (chart1.Series.Count == 0)
+            {
+                MessageBox.Show("No predictions to export. Please generate predictions first.");
+                return;
+            }
+            List<string> csvData = new List<string>
+        {
+            "Company,Date,SalesPrediction" // header
+        };
+
+            foreach (var series in chart1.Series)
+            {
+                for (int i = 0; i < series.Points.Count; i++)
+                {
+                    string company = series.Name;
+                    string date = series.Points[i].AxisLabel;
+                    string prediction = series.Points[i].YValues[0].ToString("F2");
+
+                    csvData.Add($"{company},{date},{prediction}");
+                }
+            }
+            siticoneTextBox2.Text = string.Join(Environment.NewLine, csvData);
+        }
+
+        private void chart1_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }
